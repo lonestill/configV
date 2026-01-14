@@ -1,0 +1,5 @@
+{
+  "name": "ConfigV - Visual Config Editor",
+  "description": "A powerful visual editor for JSON and YAML configuration files. Parse, edit, and preview changes in real-time with an intuitive tree-based UI.",
+  "requestFramePermissions": []
+}

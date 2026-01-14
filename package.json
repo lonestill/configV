@@ -1,0 +1,32 @@
+{
+  "name": "configv---visual-config-editor",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "ng serve",
+    "build": "ng build",
+    "preview": "ng serve --configuration=production"
+  },
+  "dependencies": {
+    "rxjs": "^7.8.2",
+    "@angular/compiler": "^21.0.0",
+    "@angular/platform-browser": "^21.0.0",
+    "@angular/core": "^21.0.0",
+    "@angular/common": "^21.0.0",
+    "@angular/forms": "^21.0.8",
+    "yaml": "2.3.4",
+    "ajv": "8.17.1",
+    "ini": "4.1.1",
+    "fast-xml-parser": "4.3.2",
+    "@angular/build": "^21.0.0",
+    "@angular/cli": "^21.0.0",
+    "@angular/compiler-cli": "^21.0.0",
+    "tailwindcss": "latest"
+  },
+  "devDependencies": {
+    "@types/node": "^22.14.0",
+    "typescript": "~5.8.2",
+    "vite": "^6.2.0"
+  }
+}

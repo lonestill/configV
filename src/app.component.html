@@ -1,0 +1,432 @@
+<div class="flex h-screen flex-col bg-gray-950 text-gray-200 selection:bg-blue-500/30 font-sans">
+  
+  <!-- Fallback Folder Input -->
+  <input #folderInput type="file" webkitdirectory directory multiple class="hidden" (change)="handleFolderSelect($event)">
+
+  <!-- Header -->
+  <header class="flex h-14 items-center justify-between border-b border-gray-800 bg-gray-900/50 backdrop-blur-md px-4 shrink-0 relative z-20">
+    <div class="flex items-center gap-4">
+      <!-- Sidebar Toggle (Only for Editor) -->
+      @if (currentView() === 'editor' && folderFiles().length > 0) {
+        <button (click)="toggleSidebar()" class="text-gray-400 hover:text-white mr-1 transition-colors">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            @if (isSidebarOpen()) {
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line>
+            } @else {
+              <line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line>
+            }
+          </svg>
+        </button>
+      }
+      
+      <!-- Logo -->
+      <div class="flex items-center gap-2">
+        <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-blue-700 font-bold text-white shadow-lg shadow-blue-500/20 ring-1 ring-white/10">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+        </div>
+        <h1 class="text-lg font-bold tracking-tight text-white hidden sm:block">Config<span class="text-blue-500">V</span></h1>
+      </div>
+
+      <!-- View Switcher -->
+      <div class="flex bg-gray-800 rounded-lg p-1 ml-4 shadow-inner">
+        <button (click)="setView('editor')" 
+                [class.bg-gray-700.text-white.shadow-sm]="currentView() === 'editor'"
+                [class.text-gray-400.hover:text-gray-200]="currentView() !== 'editor'"
+                class="px-3 py-1 rounded-md text-xs font-semibold transition-all flex items-center gap-1.5">
+           Editor
+        </button>
+        <button (click)="setView('tools')" 
+                [class.bg-gray-700.text-white.shadow-sm]="currentView() === 'tools'"
+                [class.text-gray-400.hover:text-gray-200]="currentView() !== 'tools'"
+                class="px-3 py-1 rounded-md text-xs font-semibold transition-all flex items-center gap-1.5">
+           Utilities
+        </button>
+      </div>
+    </div>
+    
+    <div class="flex items-center gap-2 sm:gap-3">
+       @if (currentView() === 'editor') {
+         <!-- Open Folder -->
+         <button (click)="openLocalFolder()" class="rounded-md bg-gray-800 px-3 py-1.5 text-xs font-medium text-gray-300 hover:text-white hover:bg-gray-700 border border-gray-700 transition-all flex items-center gap-2 shadow-sm">
+           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+           Folder
+         </button>
+
+        <!-- Add New File Button -->
+        <label class="cursor-pointer rounded-md bg-gray-800 px-3 py-1.5 text-xs font-medium text-gray-300 hover:text-white hover:bg-gray-700 border border-gray-700 transition-all flex items-center gap-2 shadow-sm">
+           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+           File
+           <input type="file" class="hidden" multiple accept=".json,.yaml,.yml,.ini,.env,.xml,.config" (change)="handleFileSelect($event)">
+        </label>
+
+        @if (activeSession(); as session) {
+          <div class="h-5 w-px bg-gray-800 mx-1 hidden sm:block"></div>
+          
+          <!-- Validation Status -->
+          <div class="relative">
+            <button 
+               class="flex items-center gap-2 outline-none group" 
+               [disabled]="!session.schema"
+               (click)="toggleErrorList($event)"
+               [title]="session.schema ? (session.validationErrors.length + ' Validation Errors') : 'No Schema Attached'">
+              @if (session.schema) {
+                @if (session.validationErrors.length === 0) {
+                  <span class="flex items-center gap-1.5 text-green-400 text-[10px] font-bold uppercase tracking-wider bg-green-950/40 px-2 py-1 rounded-full border border-green-900/50 cursor-default shadow-sm shadow-green-900/20">
+                    <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+                    Valid
+                  </span>
+                } @else {
+                  <span class="flex items-center gap-1.5 text-red-400 text-[10px] font-bold uppercase tracking-wider bg-red-950/40 px-2 py-1 rounded-full border border-red-900/50 hover:bg-red-900/30 transition-colors shadow-sm shadow-red-900/20">
+                     <span class="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>
+                    {{ session.validationErrors.length }} Errors
+                  </span>
+                }
+              } @else {
+                 <span class="text-xs text-gray-600 font-medium px-2 py-1 hidden sm:inline">No Schema</span>
+              }
+            </button>
+            
+            <!-- Error Dropdown -->
+            @if (session.schema && session.validationErrors.length > 0 && showErrorList()) {
+               <div class="absolute right-0 top-full mt-3 w-80 bg-gray-900 border border-gray-700 rounded-lg shadow-2xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                 <div class="px-3 py-2 bg-gray-950 border-b border-gray-800 text-xs font-semibold text-gray-400">
+                   Validation Issues
+                 </div>
+                 <div class="max-h-60 overflow-y-auto">
+                   @for (error of session.validationErrors; track error.path) {
+                     <button 
+                       (click)="scrollToError(error.path)"
+                       class="w-full text-left px-4 py-3 border-b border-gray-800 hover:bg-gray-800 transition-colors group flex flex-col gap-1 last:border-0">
+                       <span class="text-xs font-mono text-red-400 group-hover:text-red-300 font-bold truncate w-full block">
+                         {{ error.path }}
+                       </span>
+                       <span class="text-xs text-gray-400 group-hover:text-gray-200">
+                         {{ error.message }}
+                       </span>
+                     </button>
+                   }
+                 </div>
+               </div>
+               <div class="fixed inset-0 z-40 bg-transparent" (click)="toggleErrorList()"></div>
+            }
+          </div>
+
+          <!-- Actions Dropdown Trigger -->
+          <div class="relative">
+             <button (click)="toggleActionsMenu($event)" class="rounded-md bg-gray-800 px-3 py-1.5 text-xs font-bold text-gray-300 hover:text-white hover:bg-gray-700 border border-gray-700 transition-all flex items-center gap-2 shadow-sm">
+                Actions
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+             </button>
+
+             @if (showActionsMenu()) {
+                <div class="absolute right-0 top-full mt-2 w-48 bg-gray-900 border border-gray-700 rounded-lg shadow-xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                   <div class="py-1">
+                      <button (click)="convertConfig()" class="w-full text-left px-4 py-2 text-xs text-gray-300 hover:bg-blue-600 hover:text-white transition-colors flex items-center gap-2">
+                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                         Rotate Format (Current: {{ session.type | uppercase }})
+                      </button>
+                      
+                      <div class="h-px bg-gray-800 my-1"></div>
+                      
+                      <div class="px-4 py-1 text-[10px] font-bold text-gray-500 uppercase tracking-wider">Generate Code</div>
+                      <button (click)="openTypeModal('typescript')" class="w-full text-left px-4 py-2 text-xs text-gray-300 hover:bg-gray-800 hover:text-white transition-colors flex items-center gap-2">
+                         <span class="text-blue-400 font-bold">TS</span> TypeScript Interface
+                      </button>
+                      <button (click)="openTypeModal('go')" class="w-full text-left px-4 py-2 text-xs text-gray-300 hover:bg-gray-800 hover:text-white transition-colors flex items-center gap-2">
+                         <span class="text-cyan-400 font-bold">GO</span> Go Struct
+                      </button>
+                   </div>
+                </div>
+                <div class="fixed inset-0 z-40 bg-transparent" (click)="toggleActionsMenu()"></div>
+             }
+          </div>
+
+          <div class="flex items-center gap-1">
+            <!-- Attach Schema -->
+            <label class="cursor-pointer p-2 rounded-md hover:bg-gray-800 text-gray-500 hover:text-white transition-colors" title="Attach JSON Schema">
+               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path><polyline points="14 2 14 8 20 8"></polyline><path d="M12 18v-6"></path><path d="M9 15l3 3 3-3"></path></svg>
+               <input type="file" class="hidden" accept=".json" (change)="handleSchemaSelect($event)">
+            </label>
+          
+            <button 
+              (click)="undo()" 
+              [disabled]="!canUndo()"
+              class="p-2 rounded-md hover:bg-gray-800 disabled:opacity-30 disabled:hover:bg-transparent text-gray-500 hover:text-white transition-colors"
+              title="Undo">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/>
+              </svg>
+            </button>
+            <button 
+              (click)="redo()" 
+              [disabled]="!canRedo()"
+              class="p-2 rounded-md hover:bg-gray-800 disabled:opacity-30 disabled:hover:bg-transparent text-gray-500 hover:text-white transition-colors"
+              title="Redo">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3l3 2.7"/>
+              </svg>
+            </button>
+
+            <!-- Toggle Preview -->
+            <button 
+              (click)="togglePreview()" 
+              class="p-2 rounded-md hover:bg-gray-800 text-gray-500 hover:text-white transition-colors hidden md:block"
+              [class.text-blue-400]="showPreview()"
+              [title]="showPreview() ? 'Hide Preview' : 'Show Preview'">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                 @if (showPreview()) {
+                   <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="15" y1="3" x2="15" y2="21"></line>
+                 } @else {
+                   <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                 }
+              </svg>
+            </button>
+          </div>
+
+          <div class="h-5 w-px bg-gray-800 mx-1 hidden sm:block"></div>
+
+          <button (click)="copyToClipboard()" class="text-xs font-medium text-gray-400 hover:text-white transition-colors px-2 hidden sm:block">
+            Copy
+          </button>
+          <button (click)="downloadConfig()" class="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-900 transition-all border border-blue-500">
+            Download
+          </button>
+        }
+       } @else {
+          <!-- Placeholder when in Tools Mode to keep header aligned -->
+          <div class="text-xs text-gray-600 font-mono">Dev Suite v1.0</div>
+       }
+    </div>
+  </header>
+
+  <!-- Main Content Area -->
+  <main class="flex flex-1 overflow-hidden relative bg-gray-950">
+    
+    @if (currentView() === 'tools') {
+       <div class="w-full h-full">
+         <app-tools></app-tools>
+       </div>
+    } 
+    @else {
+      <!-- Editor View -->
+
+      <!-- Sidebar (File Explorer) -->
+      @if (isSidebarOpen() && folderFiles().length > 0) {
+        <div class="w-64 border-r border-gray-800 bg-gray-900 flex flex-col shrink-0 transition-all duration-300">
+          <div class="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center justify-between">
+            <span>Explorer</span>
+            <button (click)="openLocalFolder()" class="hover:text-white" title="Change Folder">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+            </button>
+          </div>
+          <div class="flex-1 overflow-y-auto px-2 pb-2 scrollbar-thin scrollbar-thumb-gray-800">
+            @for (file of folderFiles(); track file.name) {
+               <button (click)="openFileFromSidebar(file)" class="w-full flex items-center gap-2 px-3 py-2 rounded text-xs text-gray-400 hover:text-gray-200 hover:bg-gray-800 transition-colors text-left truncate group">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="flex-shrink-0 text-gray-600 group-hover:text-blue-400"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                  <span class="truncate">{{ file.name }}</span>
+               </button>
+            }
+          </div>
+        </div>
+      }
+
+      <!-- Tabs if we have sessions -->
+      @if (sessions().length > 0) {
+        <div class="absolute top-0 left-0 right-0 z-10 flex overflow-x-auto border-b border-gray-800 bg-gray-900 px-2 pt-2 scrollbar-thin scrollbar-thumb-gray-800" 
+             [class.left-64]="isSidebarOpen() && folderFiles().length > 0">
+          @for (session of sessions(); track session.id) {
+            <div 
+              (click)="setActive(session.id)"
+              class="group relative flex min-w-[140px] max-w-[220px] items-center justify-between gap-2 rounded-t-md border-t border-l border-r px-3 py-2 text-xs font-medium transition-all cursor-pointer select-none"
+              [class.border-gray-800]="session.id === activeSessionId()"
+              [class.bg-gray-850]="session.id === activeSessionId()"
+              [class.text-gray-200]="session.id === activeSessionId()"
+              [class.border-transparent]="session.id !== activeSessionId()"
+              [class.text-gray-500]="session.id !== activeSessionId()"
+              [class.hover:bg-gray-800]="session.id !== activeSessionId()"
+              [class.hover:text-gray-300]="session.id !== activeSessionId()">
+              
+              <div class="flex items-center gap-2 truncate">
+                 <span class="w-2 h-2 rounded-full flex-shrink-0" 
+                    [class.bg-yellow-500]="session.type === 'json'" 
+                    [class.bg-purple-500]="session.type === 'yaml'"
+                    [class.bg-blue-500]="session.type === 'ini'"
+                    [class.bg-green-500]="session.type === 'env'"
+                    [class.bg-orange-500]="session.type === 'xml'"></span>
+                 <span class="truncate">{{ session.name }}</span>
+              </div>
+              
+              <button 
+                (click)="closeSession($event, session.id)"
+                class="rounded p-0.5 opacity-0 group-hover:opacity-100 hover:bg-gray-700 text-gray-500 hover:text-red-400 transition-all">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              </button>
+            </div>
+          }
+        </div>
+      }
+
+      <!-- Main Editor Content -->
+      <div class="flex-1 flex flex-col relative w-full h-full pt-[38px]"> <!-- pt-9 to account for tabs height -->
+          <!-- If No Sessions: Drop Zone -->
+          @if (sessions().length === 0) {
+            <div class="absolute inset-0 flex flex-col items-center justify-center p-8 text-center bg-gray-950"
+                 (dragover)="handleDragOver($event)"
+                 (drop)="handleDrop($event)">
+              
+              <div class="w-full max-w-md p-8 border-2 border-dashed border-gray-800 rounded-xl bg-gray-900/50 flex flex-col items-center">
+                  <div class="mb-6 rounded-full bg-gray-800 p-4 ring-1 ring-white/5">
+                    <svg class="h-8 w-8 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                    </svg>
+                  </div>
+                  <h3 class="mb-2 text-lg font-semibold text-white">Open config files</h3>
+                  <p class="mb-6 text-sm text-gray-500">Drop files or open a folder</p>
+                  
+                  <div class="flex flex-col gap-3 w-full max-w-xs">
+                    <button (click)="openLocalFolder()" class="cursor-pointer rounded-lg bg-gray-800 border border-gray-700 px-4 py-2.5 text-sm font-semibold text-gray-300 hover:text-white hover:bg-gray-700 transition-all flex items-center justify-center gap-2">
+                       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                       Open Folder
+                    </button>
+                    
+                    <label class="cursor-pointer rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-500 transition-colors shadow-lg shadow-blue-900/20 text-center w-full">
+                      Browse Files
+                      <input type="file" class="hidden" multiple accept=".json,.yaml,.yml,.ini,.env,.xml,.config" (change)="handleFileSelect($event)">
+                    </label>
+                    
+                    <!-- Demos -->
+                    <div class="flex flex-wrap items-center justify-center gap-2 mt-4 px-2">
+                       <button (click)="loadDemo('json')" class="px-2 py-1 text-[10px] font-bold uppercase tracking-wider bg-yellow-900/30 text-yellow-400 border border-yellow-800/50 rounded hover:bg-yellow-900/50 transition-colors">JSON</button>
+                       <button (click)="loadDemo('yaml')" class="px-2 py-1 text-[10px] font-bold uppercase tracking-wider bg-purple-900/30 text-purple-400 border border-purple-800/50 rounded hover:bg-purple-900/50 transition-colors">YAML</button>
+                       <button (click)="loadDemo('ini')" class="px-2 py-1 text-[10px] font-bold uppercase tracking-wider bg-blue-900/30 text-blue-400 border border-blue-800/50 rounded hover:bg-blue-900/50 transition-colors">INI</button>
+                       <button (click)="loadDemo('env')" class="px-2 py-1 text-[10px] font-bold uppercase tracking-wider bg-green-900/30 text-green-400 border border-green-800/50 rounded hover:bg-green-900/50 transition-colors">ENV</button>
+                       <button (click)="loadDemo('xml')" class="px-2 py-1 text-[10px] font-bold uppercase tracking-wider bg-orange-900/30 text-orange-400 border border-orange-800/50 rounded hover:bg-orange-900/50 transition-colors">XML</button>
+                    </div>
+                  </div>
+              </div>
+
+              @if (errorMsg()) {
+                <div class="mt-6 rounded-lg bg-red-950/30 p-4 text-sm text-red-400 border border-red-900/50 flex items-center gap-2 max-w-md animate-in fade-in slide-in-from-bottom-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                  {{ errorMsg() }}
+                </div>
+              }
+            </div>
+          } 
+          
+          <!-- If Active Session exists -->
+          @else if (activeSession(); as session) {
+            <!-- Editor Split View -->
+            <div class="flex w-full h-full"
+                 (dragover)="handleDragOver($event)"
+                 (drop)="handleDrop($event)">
+                 
+              <!-- Left Panel: Editor -->
+              <div class="flex w-full flex-col border-r border-gray-800 bg-gray-900"
+                   [ngClass]="{'md:w-1/2 lg:w-3/5': showPreview()}">
+                
+                <!-- Search Bar -->
+                <div class="border-b border-gray-800 bg-gray-900 p-3 sticky top-0 z-10 shadow-sm">
+                  <div class="relative">
+                    <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                      <svg class="h-3.5 w-3.5 text-gray-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                        <path fill-rule="evenodd" d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z" clip-rule="evenodd" />
+                      </svg>
+                    </div>
+                    <input 
+                      type="text" 
+                      [value]="searchTerm()"
+                      (input)="updateSearch($event)"
+                      class="block w-full rounded bg-gray-950/50 py-1.5 pl-9 pr-3 text-xs text-gray-300 placeholder:text-gray-600 border border-gray-800 focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50 outline-none transition-colors" 
+                      placeholder="Search keys or values...">
+                  </div>
+                </div>
+
+                <div class="flex-1 overflow-y-auto p-4 scroll-smooth scrollbar-thin scrollbar-thumb-gray-800">
+                  <form [formGroup]="session.formGroup">
+                    @for (key of filteredRootKeys(); track key) {
+                      <div class="mb-1">
+                        <app-recursive-field 
+                           [control]="getControl(session.formGroup, key)" 
+                           [label]="key"
+                           [path]="key"
+                           [comments]="session.comments"
+                           [searchTerm]="searchTerm()"
+                           [errorMap]="errorMap()"
+                           [activeErrorPath]="activeErrorPath()"
+                           (commentChange)="handleCommentChange($event.path, $event.comment)">
+                        </app-recursive-field>
+                      </div>
+                    }
+                  </form>
+                </div>
+                
+                <div class="border-t border-gray-800 bg-gray-900 px-4 py-1.5 text-[10px] text-gray-500 flex justify-between shrink-0 uppercase tracking-widest font-semibold select-none">
+                  <span>Editor</span>
+                  <span class="flex items-center gap-2">
+                    @if (canUndo()) {
+                      <span class="flex items-center gap-1 text-blue-400">
+                        <span class="h-1.5 w-1.5 rounded-full bg-blue-500 animate-pulse"></span>
+                        Saving...
+                      </span>
+                    }
+                    <span class="text-xs text-gray-600">
+                        Autosaved
+                    </span>
+                  </span>
+                </div>
+              </div>
+
+              <!-- Right Panel: Preview -->
+              <div class="hidden w-1/2 flex-col bg-gray-950 lg:w-2/5"
+                   [ngClass]="{'md:flex': showPreview()}">
+                <div class="flex items-center justify-between border-b border-gray-800 bg-gray-950 px-4 py-2 shrink-0">
+                  <span class="text-[10px] font-bold uppercase tracking-widest text-gray-500">Preview</span>
+                  <div class="flex gap-2">
+                    <span class="text-[10px] font-mono text-gray-600 bg-gray-900 px-1.5 py-0.5 rounded border border-gray-800">{{ session.type | uppercase }}</span>
+                  </div>
+                </div>
+                
+                <div class="relative flex-1 overflow-hidden bg-gray-950">
+                  <!-- Syntax Highlighted Code Block -->
+                  <pre class="h-full w-full overflow-auto p-4 font-mono text-sm leading-relaxed outline-none scrollbar-thin scrollbar-thumb-gray-800 scrollbar-track-transparent selection:bg-gray-800"><code [class]="'language-' + (session.type === 'xml' ? 'markup' : session.type === 'env' ? 'bash' : session.type)" [innerHTML]="highlightedPreview()"></code></pre>
+                </div>
+              </div>
+            </div>
+          }
+      </div>
+    }
+
+    <!-- Code Generation Modal -->
+    @if (isCodeModalOpen()) {
+      <div class="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/80 backdrop-blur-sm animate-in fade-in duration-200">
+         <div class="w-full max-w-4xl bg-gray-900 border border-gray-700 rounded-xl shadow-2xl overflow-hidden flex flex-col h-[80vh] m-4 animate-in zoom-in-95 duration-200">
+            <!-- Header -->
+            <div class="flex items-center justify-between px-4 py-3 border-b border-gray-800 bg-gray-950">
+               <h3 class="text-sm font-bold text-gray-300 flex items-center gap-2">
+                 @if (generatedCodeLang() === 'typescript') {
+                   <span class="text-blue-400">TS</span> Generated TypeScript
+                 } @else {
+                   <span class="text-cyan-400">GO</span> Generated Go Structs
+                 }
+               </h3>
+               <button (click)="closeCodeModal()" class="text-gray-500 hover:text-white transition-colors">
+                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+               </button>
+            </div>
+            
+            <!-- Code Area -->
+            <div class="flex-1 relative overflow-hidden bg-gray-950">
+               <pre class="h-full w-full overflow-auto p-4 font-mono text-xs leading-relaxed outline-none scrollbar-thin scrollbar-thumb-gray-800"><code [class]="'language-' + generatedCodeLang()" [innerHTML]="highlightedGeneratedCode()"></code></pre>
+               
+               <button (click)="copyGeneratedCode()" class="absolute top-4 right-4 p-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded border border-gray-700 shadow-lg transition-colors" title="Copy">
+                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+               </button>
+            </div>
+         </div>
+         
+         <div class="fixed inset-0 -z-10" (click)="closeCodeModal()"></div>
+      </div>
+    }
+  </main>
+</div>
