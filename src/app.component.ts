@@ -714,7 +714,7 @@ export class AppComponent implements OnInit, OnDestroy {
     if (Array.isArray(data)) {
       const formArray = this.fb.array([]);
       data.forEach(item => {
-        formArray.push(this.createControl(item));
+        (formArray as any).push(this.createControl(item));
       });
       return formArray;
     } else if (data !== null && typeof data === 'object') {
